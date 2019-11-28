@@ -24,7 +24,7 @@
 import datetime
 import sys
 import unittest
-import pyrqlite.dbapi2 as sqlite
+import pydqlite.dbapi2 as sqlite
 try:
     import zlib
 except ImportError:
@@ -341,7 +341,7 @@ class ColNamesTests(unittest.TestCase):
         # whitespace should be stripped.
         self.assertEqual(self.cur.description[0][0], "x")
 
-    @unittest.expectedFailure # https://github.com/rqlite/pyrqlite/issues/16
+    @unittest.expectedFailure # https://github.com/rqlite/pydqlite/issues/16
     def test_CheckCaseInConverterName(self):
         self.cur.execute("select 'other' as \"x [b1b1]\"")
         val = self.cur.fetchone()[0]
@@ -450,7 +450,7 @@ class BinaryConverterTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.con.close()
 
-    @unittest.expectedFailure # https://github.com/rqlite/pyrqlite/issues/17
+    @unittest.expectedFailure # https://github.com/rqlite/pydqlite/issues/17
     def test_CheckBinaryInputForConverter(self):
         testdata = b"abcdefg" * 10
         compressed = zlib.compress(testdata)

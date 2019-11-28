@@ -1,5 +1,5 @@
 
-from pyrqlite.row import Row
+from pydqlite.row import Row
 
 
 def test_row():

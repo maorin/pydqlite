@@ -11,7 +11,7 @@ from setuptools import (
 )
 
 sys.path.insert(0, 'src')
-from pyrqlite.constants import (
+from pydqlite.constants import (
     __author__,
     __email__,
     __license__,
@@ -71,14 +71,14 @@ class PyLint(Command):
 
 
 setup(
-    name="pyrqlite",
+    name="pydqlite",
     version=__version__,
-    url='https://github.com/rqlite/pyrqlite/',
+    url='https://github.com/paulstuart/pydqlite/',
     author=__author__,
     author_email=__email__,
     maintainer=__author__,
     maintainer_email=__email__,
-    description='python DB API 2.0 driver for rqlite',
+    description='python DB API 2.0 driver for dqlite',
     license=__license__,
     package_dir={'': 'src'},
     packages=find_packages('src', exclude=['test']),

@@ -30,7 +30,7 @@ except ImportError:
     from test import test_support
 import unittest
 
-import pyrqlite.dbapi2 as sqlite
+import pydqlite.dbapi2 as sqlite
 
 if sys.version_info[0] >= 3:
     StandardError = Exception

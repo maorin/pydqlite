@@ -1,7 +1,7 @@
 =======
-pyrqlite
+pydqlite
 =======
-This package contains a pure-Python rqlite client library.
+This package contains a pure-Python dqlite client library.
 
 .. contents::
 
@@ -12,7 +12,7 @@ Requirements
 
   - CPython_ >= 2.7 or >= 3.3
 
-* rqlite Server
+* dqlite Server
 
 
 Installation
@@ -21,17 +21,17 @@ Installation
 The last stable release is available on github and can be installed with ``pip``::
 
     $ cd
-    $ git clone https://github.com/rqlite/pyrqlite.git
-    $ pip install ./pyrqlite
+    $ git clone https://github.com/paulstuart/pydqlite.git
+    $ pip install ./pydqlite
 
 Alternatively (e.g. if ``pip`` is not available), a tarball can be downloaded
 from GitHub and installed with Setuptools::
 
-    $ # X.X is the desired pyrqlite version (e.g. 0.5 or 0.6).
-    $ curl -L https://github.com/rqlite/tarball/pyrqlite-X.X | tar xz
-    $ cd pyrqlite*
+    $ # X.X is the desired pydqlite version (e.g. 0.5 or 0.6).
+    $ curl -L https://github.com/paulstuart/tarball/pydqlite-X.X | tar xz
+    $ cd pydqlite*
     $ python setup.py install
-    $ # The folder pyrqlite* can be safely removed now.
+    $ # The folder pydqlite* can be safely removed now.
 
 Test Suite
 ----------
@@ -50,7 +50,7 @@ The following code creates a connection and executes some statements:
 
 .. code:: python
 
-    import pyrqlite.dbapi2 as dbapi2
+    import pydqlite.dbapi2 as dbapi2
 
     # Connect to the database
     connection = dbapi2.connect(
@@ -101,4 +101,4 @@ DB-API 2.0: http://www.python.org/dev/peps/pep-0249
 
 License
 -------
-pyrqlite is released under the MIT License. See LICENSE for more information.
+pydqlite is released under the MIT License. See LICENSE for more information.
