@@ -76,8 +76,11 @@ class Cursor(object):
             response.reason)
         response_text = response.read().decode('utf-8')
         logger.debug("raw response: %s", response_text)
-        response_json = json.loads(
-            response_text, object_pairs_hook=OrderedDict)
+        try:
+            response_json = json.loads(
+                response_text, object_pairs_hook=OrderedDict)
+        except Exception as e:
+            raise(e)
         if debug:
             logger.debug(
                 "formatted response: %s",
@@ -86,6 +89,7 @@ class Cursor(object):
                     indent=4))
         return response_json
 
+    #TODO: remove this -- pass args directly to DB and let it do param subst
     def _substitute_params(self, operation, parameters):
         '''
         SQLite natively supports only the types TEXT, INTEGER, REAL, BLOB and
@@ -160,6 +164,7 @@ class Cursor(object):
             payload = self._request("GET",
                                     "/db/query?" + _urlencode({'q': operation}))
         else:
+            print(f"\n OPERATION: {operation}\n")
             payload = self._request("POST", "/db/execute?transaction",
                                     headers={'Content-Type': 'application/json'}, body=json.dumps([operation]))
 
@@ -167,16 +172,24 @@ class Cursor(object):
         rows_affected = -1
         payload_rows = {}
         try:
+            print(f"PAYLOAD: {payload}")
             results = payload["results"]
         except KeyError:
+            print("ERP KEY ERROR")
             pass
+        except TypeError as e:
+            print(f"payload is {payload}")
+            raise(e)
         else:
+            print(f"ALL RESULTS: {results}")
             rows_affected = 0
             for item in results:
+                print(f"RESULTS: {results}")
                 if 'error' in item:
                     logging.getLogger(__name__).error(json.dumps(item))
                     raise Error(json.dumps(item))
                 try:
+                    print(f"ITEM ROWS_AFFECTED: {item}")
                     rows_affected += item['rows_affected']
                 except KeyError:
                     pass
@@ -222,6 +235,7 @@ class Cursor(object):
                     for payload_row in values:
                         row = []
                         for field, converter, value in zip(fields, converters, payload_row):
+                            print(f"CONVERT VALUE: {value}")
                             row.append((field, (value if converter is None
                                                 else converter(value))))
                         rows.append(Row(row))

@@ -21,7 +21,7 @@ from .constants import (
 )
 
 from .cursors import Cursor
-from ._ephemeral import EphemeralRqlited as _EphemeralRqlited
+from ._ephemeral import EphemeralDqlited as _EphemeralDqlited
 from .extensions import PARSE_DECLTYPES, PARSE_COLNAMES
 
 
@@ -43,7 +43,6 @@ class Connection(object):
     def __init__(self, host='localhost', port=4001,
                  user=None, password=None, connect_timeout=None,
                  detect_types=0, max_redirects=UNLIMITED_REDIRECTS):
-
         self.messages = []
         self.host = host
         self.port = port
@@ -52,7 +51,6 @@ class Connection(object):
             self._headers['Authorization'] = 'Basic ' + \
                 codecs.encode('{}:{}'.format(user, password).encode('utf-8'),
                               'base64').decode('utf-8').rstrip('\n')
-
         self.connect_timeout = connect_timeout
         self.max_redirects = max_redirects
         self.detect_types = detect_types
@@ -60,7 +58,7 @@ class Connection(object):
         self.parse_colnames = detect_types & PARSE_COLNAMES
         self._ephemeral = None
         if host == ':memory:':
-            self._ephemeral = _EphemeralRqlited().__enter__()
+            self._ephemeral = _EphemeralDqlited().__enter__()
             self.host, self.port = self._ephemeral.http
         self._connection = self._init_connection()
 

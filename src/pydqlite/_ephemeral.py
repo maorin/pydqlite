@@ -10,7 +10,7 @@ import tempfile
 import time
 
 
-class EphemeralRqlited(object):
+class EphemeralDqlited(object):
     def __init__(self):
         self.host = None
         self.http = None
@@ -55,7 +55,7 @@ class EphemeralRqlited(object):
             self.http = (self.host, http_port)
             self.raft = (self.host, raft_port)
             with open(os.devnull, mode='wb', buffering=0) as devnull:
-                filename = 'rqlited'
+                filename = 'dqlited'
                 try:
                     self._proc = subprocess.Popen([filename,
                         '-http-addr', '{}:{}'.format(*self.http),

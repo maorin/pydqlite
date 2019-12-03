@@ -32,6 +32,9 @@ import unittest
 
 import pydqlite.dbapi2 as sqlite
 
+localdb = ":memory:"
+localdb = "localhost"
+
 if sys.version_info[0] >= 3:
     StandardError = Exception
 
@@ -94,7 +97,7 @@ class ModuleTests(unittest.TestCase):
 class ConnectionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.cx = sqlite.connect(":memory:")
+        cls.cx = sqlite.connect(localdb)
 
     def setUp(self):
         cu = self.cx.cursor()
@@ -141,7 +144,7 @@ class ConnectionTests(unittest.TestCase):
             return
         self.fail("should have raised an OperationalError")
 
-    def test_CheckClose(self):
+    def test_CheckCloseX0(self):
         # This would interfere with other tests, and
         # tearDownClass exercises it already.
         #self.cx.close()
@@ -163,7 +166,7 @@ class ConnectionTests(unittest.TestCase):
 class CursorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.cx = sqlite.connect(":memory:")
+        cls.cx = sqlite.connect(localdb)
 
     def setUp(self):
         self.cu = self.cx.cursor()
@@ -337,7 +340,7 @@ class CursorTests(unittest.TestCase):
         except sqlite.ProgrammingError:
             pass
 
-    def test_CheckClose(self):
+    def test_CheckCloseX2(self):
         self.cu.close()
         self.cu = self.cx.cursor()
 
@@ -470,6 +473,7 @@ class CursorTests(unittest.TestCase):
         self.cu.execute("insert into test(name) values ('C')")
         self.cu.execute("select name from test")
         res = self.cu.fetchmany()
+        print(f"MY RES:{res}")
 
         self.assertEqual(len(res), 2)
 
@@ -518,6 +522,7 @@ class CursorTests(unittest.TestCase):
             return
         self.fail("should have raised a ValueError")
 
+"""
     @unittest.skip('not implemented')
     def test_CheckCursorWrongClass(self):
         class Foo: pass
@@ -527,6 +532,7 @@ class CursorTests(unittest.TestCase):
             self.fail("should have raised a ValueError")
         except TypeError:
             pass
+"""
 
 
 class ConstructorTests(unittest.TestCase):
@@ -557,7 +563,7 @@ class ConstructorTests(unittest.TestCase):
 class ExtensionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.con = sqlite.connect(":memory:")
+        cls.con = sqlite.connect(localdb)
 
     def tearDown(self):
         for row in self.con.execute(
@@ -640,7 +646,7 @@ class ExtensionTests(unittest.TestCase):
 class ClosedConTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.con = sqlite.connect(":memory:")
+        cls.con = sqlite.connect(localdb)
         cls.cur = cls.con.cursor()
         cls.con.close()
 
@@ -754,7 +760,7 @@ class ClosedConTests(unittest.TestCase):
 class ClosedCurTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.con = sqlite.connect(":memory:")
+        cls.con = sqlite.connect(localdb)
         cls.cur = cls.con.cursor()
         cls.cur.close()
 

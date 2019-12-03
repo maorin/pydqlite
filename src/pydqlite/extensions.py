@@ -2,10 +2,9 @@ from __future__ import unicode_literals
 
 """
 SQLite natively supports only the types TEXT, INTEGER, REAL, BLOB and NULL.
-And RQLite always answers 'bytes' values.
 
-Converters transforms RQLite answers to Python native types.
-Adapters transforms Python native types to RQLite-aware values.
+Converters transforms DQLite answers to Python native types.
+Adapters transforms Python native types to DQLite-aware values.
 """
 
 import codecs
@@ -67,6 +66,7 @@ def _convert_date(val):
 
 def _convert_timestamp(val):
     datepart, timepart = val.split("T")
+    ymd = datepart.split("-")
     year, month, day = map(int, datepart.split("-"))
     timepart_full = timepart.strip('Z').split(".")
     hours, minutes, seconds = map(int, timepart_full[0].split(":"))
@@ -74,7 +74,27 @@ def _convert_timestamp(val):
         microseconds = int('{:0<6.6}'.format(timepart_full[1]))
     else:
         microseconds = 0
+    val = datetime.datetime(year, month, day, hours, minutes, seconds, microseconds)
+    return val
 
+def XX_convert_timestamp(val):
+    if isinstance(val, str):
+        #val = val.encode('utf-8')
+        val = bytes(val, 'utf-8')
+    print(f"VAL BECOMES: {val} is a: {type(val)}")
+    v2 = bytes(val)
+    print(f"V2 BECOMES: {v2} is a: {type(v2)}")
+    datepart, timepart = v2.decode().split("T")
+    ymd = datepart.split("-")
+    print(f"YMD: {ymd}")
+    year, month, day = map(int, datepart.split("-"))
+    timepart_full = timepart.strip('Z').split(".")
+    print(f"TIMEPART: {timepart_full}")
+    hours, minutes, seconds = map(int, timepart_full[0].split(":"))
+    if len(timepart_full) == 2:
+        microseconds = int('{:0<6.6}'.format(timepart_full[1]))
+    else:
+        microseconds = 0
     val = datetime.datetime(year, month, day, hours, minutes, seconds, microseconds)
     return val
 
@@ -109,11 +129,13 @@ converters = {
     'BLOB': lambda x: x,
     'DATE': functools.partial(_null_wrapper, _convert_date),
     'DATETIME': lambda x: x.replace('T', ' ').rstrip('Z'),
+    'TIME': functools.partial(_null_wrapper, _convert_timestamp),
     'TIMESTAMP': functools.partial(_null_wrapper, _convert_timestamp),
 }
 
 # Non-native converters will be decoded from base64 before fed into converter
-_native_converters = ('BOOL', 'FLOAT', 'INTEGER', 'REAL', 'NUMBER', 'NULL', 'DATE', 'DATETIME', 'TIMESTAMP')
+# TODO: 'TIME' is only one passed (datetime/timestamp nopes)
+_native_converters = ('BOOL', 'FLOAT', 'INTEGER', 'REAL', 'NUMBER', 'NULL', 'DATE', 'DATETIME', 'TIMESTAMP', 'TIME')
 
 # SQLite TEXT affinity: https://www.sqlite.org/datatype3.html
 _text_affinity_re = re.compile(r'CHAR|CLOB|TEXT')
@@ -136,6 +158,7 @@ def _convert_to_python(column_name, type_, parse_decltypes=False, parse_colnames
     converter = None
     type_upper = None
 
+    print(f"========> CONVERT COL: {column_name}, TYPE: {type_}\n")
     if type_ == '':     # q="select 3.0" -> type='' column_name='3.0' value=3
         if column_name.isdigit():
             type_ = 'int'
