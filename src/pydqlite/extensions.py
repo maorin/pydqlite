@@ -135,7 +135,8 @@ converters = {
 
 # Non-native converters will be decoded from base64 before fed into converter
 # TODO: 'TIME' is only one passed (datetime/timestamp nopes)
-_native_converters = ('BOOL', 'FLOAT', 'INTEGER', 'REAL', 'NUMBER', 'NULL', 'DATE', 'DATETIME', 'TIMESTAMP', 'TIME')
+#_native_converters = ('BOOL', 'FLOAT', 'INTEGER', 'REAL', 'NUMBER', 'NULL', 'DATE', 'DATETIME', 'TIMESTAMP', 'TIME')
+_native_converters = ('BOOL', 'FLOAT', 'INTEGER', 'REAL', 'NUMBER', 'NULL', 'DATE', 'TIME')
 
 # SQLite TEXT affinity: https://www.sqlite.org/datatype3.html
 _text_affinity_re = re.compile(r'CHAR|CLOB|TEXT')
@@ -158,7 +159,6 @@ def _convert_to_python(column_name, type_, parse_decltypes=False, parse_colnames
     converter = None
     type_upper = None
 
-    print(f"========> CONVERT COL: {column_name}, TYPE: {type_}\n")
     if type_ == '':     # q="select 3.0" -> type='' column_name='3.0' value=3
         if column_name.isdigit():
             type_ = 'int'

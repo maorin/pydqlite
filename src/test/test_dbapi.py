@@ -473,8 +473,6 @@ class CursorTests(unittest.TestCase):
         self.cu.execute("insert into test(name) values ('C')")
         self.cu.execute("select name from test")
         res = self.cu.fetchmany()
-        print(f"MY RES:{res}")
-
         self.assertEqual(len(res), 2)
 
     def test_CheckFetchmany(self):

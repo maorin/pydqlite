@@ -35,7 +35,7 @@ else:
 class Cursor(object):
     arraysize = 1
 
-    def __init__(self, connection):
+    def __init__(self, connection, debug=False):
         self._connection = connection
         self.messages = []
         self.lastrowid = None
@@ -45,6 +45,7 @@ class Cursor(object):
         self.arraysize = 1
         self._rows = None
         self._column_type_cache = {}
+        self.debug = debug
 
     def __enter__(self):
         return self
@@ -164,7 +165,6 @@ class Cursor(object):
             payload = self._request("GET",
                                     "/db/query?" + _urlencode({'q': operation}))
         else:
-            print(f"\n OPERATION: {operation}\n")
             payload = self._request("POST", "/db/execute?transaction",
                                     headers={'Content-Type': 'application/json'}, body=json.dumps([operation]))
 
@@ -172,24 +172,24 @@ class Cursor(object):
         rows_affected = -1
         payload_rows = {}
         try:
-            print(f"PAYLOAD: {payload}")
+            if self.debug:
+                print(f"PAYLOAD: {payload}")
             results = payload["results"]
+            """
         except KeyError:
             print("ERP KEY ERROR")
             pass
+            """
         except TypeError as e:
             print(f"payload is {payload}")
             raise(e)
         else:
-            print(f"ALL RESULTS: {results}")
             rows_affected = 0
             for item in results:
-                print(f"RESULTS: {results}")
                 if 'error' in item:
                     logging.getLogger(__name__).error(json.dumps(item))
                     raise Error(json.dumps(item))
                 try:
-                    print(f"ITEM ROWS_AFFECTED: {item}")
                     rows_affected += item['rows_affected']
                 except KeyError:
                     pass
@@ -235,7 +235,6 @@ class Cursor(object):
                     for payload_row in values:
                         row = []
                         for field, converter, value in zip(fields, converters, payload_row):
-                            print(f"CONVERT VALUE: {value}")
                             row.append((field, (value if converter is None
                                                 else converter(value))))
                         rows.append(Row(row))
