@@ -153,132 +153,67 @@ class Cursor(object):
     def _get_sql_command(self, sql_str):
         return sql_str.split(None, 1)[0].upper()
 
+    def _parse_query_result(self, result_str):
+        """
+        解析从 dqlite_query 返回的结果字符串，并将其转换为行列表。
+        """
+        rows = []
+        
+        # 简单处理结果字符串，假设结果是以换行分隔的行，每行以逗号分隔
+        for row in result_str.split('\n'):
+            if row.strip():  # 跳过空行
+                rows.append(tuple(row.split(',')))  # 将每行以逗号分隔成字段
+        
+        return rows
+
     def execute(self, operation, parameters=None):
-        if not isinstance(operation, basestring):
-            raise ValueError(
-                             "argument must be a string, not '{}'".format(type(operation).__name__))
-
         operation = self._substitute_params(operation, parameters)
-
-        command = self._get_sql_command(operation)
-        if command in ('SELECT', 'PRAGMA'):
-            payload = self._request("GET",
-                                    "/db/query?" + _urlencode({'q': operation}))
-        else:
-            payload = self._request("POST", "/db/execute?transaction",
-                                    headers={'Content-Type': 'application/json'}, body=json.dumps([operation]))
-
-        last_insert_id = None
-        rows_affected = -1
-        payload_rows = {}
-        try:
-            if self.debug:
-                print(f"PAYLOAD: {payload}")
-            results = payload["results"]
-            """
-        except KeyError:
-            print("ERP KEY ERROR")
-            pass
-            """
-        except TypeError as e:
-            print(f"payload is {payload}")
-            raise(e)
-        else:
-            rows_affected = 0
-            for item in results:
-                if 'error' in item:
-                    logging.getLogger(__name__).error(json.dumps(item))
-                    raise Error(json.dumps(item))
-                try:
-                    rows_affected += item['rows_affected']
-                except KeyError:
-                    pass
-                try:
-                    last_insert_id = item['last_insert_id']
-                except KeyError:
-                    pass
-                if 'columns' in item:
-                    payload_rows = item
-
-        try:
-            fields = payload_rows['columns']
-        except KeyError:
-            self.description = None
-            self._rows = []
-            if command == 'INSERT':
-                self.lastrowid = last_insert_id
-        else:
-            rows = []
-            description = []
-            for field in fields:
-                description.append((
-                    _column_stripper(field, parse_colnames=self.connection.parse_colnames),
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                ))
-
-            try:
-                values = payload_rows['values']
-                types = payload_rows['types']
-            except KeyError:
-                pass
-            else:
-                if values:
-                    converters = [_convert_to_python(field, type_,
-                                  parse_decltypes=self.connection.parse_decltypes,
-                                  parse_colnames=self.connection.parse_colnames)
-                                  for field, type_ in zip(fields, types)]
-                    for payload_row in values:
-                        row = []
-                        for field, converter, value in zip(fields, converters, payload_row):
-                            row.append((field, (value if converter is None
-                                                else converter(value))))
-                        rows.append(Row(row))
-            self._rows = rows
-            self.description = tuple(description)
-
-        self.rownumber = 0
-        if command in ('UPDATE', 'DELETE'):
-            # sqalchemy's _emit_update_statements function asserts
-            # rowcount for each update, and _emit_delete_statements
-            # warns unless rowcount matches
-            self.rowcount = rows_affected
-        else:
+        query = operation.encode()  # 转换为字节类型
+        print(query)
+        query_result = self._connection.libdqlite.dqlite_query(query)
+        print(query_result)
+        if query_result:
+            # 解析查询结果并写入 self._rows
+            query_result_str = query_result.decode()
+            print(query_result_str)
+            self._rows = self._parse_query_result(query_result_str)
             self.rowcount = len(self._rows)
-        return self
+            print(f"Query result written to self._rows: {self._rows}")
+        else:
+            print("No result or query failed")
+            self._rows = []
+            self.rowcount = 0
+            return self
 
     def executemany(self, operation, seq_of_parameters=None):
         if not isinstance(operation, basestring):
-            raise ValueError(
-                "argument must be a string, not '{}'".format(type(operation).__name__))
+            raise ValueError("argument must be a string, not '{}'".format(type(operation).__name__))
 
-        statements = []
-        for parameters in seq_of_parameters:
-            statements.append(self._substitute_params(operation, parameters))
-        payload = self._request("POST", "/db/execute?transaction",
-                                headers={'Content-Type': 'application/json'},
-                                body=json.dumps(statements))
-        rows_affected = -1
-        try:
-            results = payload["results"]
-        except KeyError:
-            pass
-        else:
-            rows_affected = 0
-            for item in results:
-                if 'error' in item:
-                    logging.getLogger(__name__).error(json.dumps(item))
-                try:
-                    rows_affected += item['rows_affected']
-                except KeyError:
-                    pass
         self._rows = []
-        self.rownumber = 0
-        self.rowcount = rows_affected
+        self.rowcount = 0
+
+        # 对每组参数执行一次查询
+        for parameters in seq_of_parameters:
+            # 替换参数
+            query = self._substitute_params(operation, parameters).encode()  # 转换为字节类型
+            print(f"Executing query: {query}")
+            
+            # 执行查询
+            query_result = self._connection.libdqlite.dqlite_query(query)
+            print(query_result)
+
+            if query_result:
+                # 解析查询结果并追加到 self._rows
+                query_result_str = query_result.decode()
+                print(f"Query result: {query_result_str}")
+                rows = self._parse_query_result(query_result_str)
+                self._rows.extend(rows)
+                self.rowcount += len(rows)
+            else:
+                print("No result or query failed for this execution.")
+
+        print(f"Total rows affected: {self.rowcount}")
+        return self
 
     def fetchone(self):
         ''' Fetch the next row '''

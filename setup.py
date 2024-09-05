@@ -82,6 +82,9 @@ setup(
     license=__license__,
     package_dir={'': 'src'},
     packages=find_packages('src', exclude=['test']),
+    package_data={
+        'pydqlite': ['libdqlite.so'],  # 将 libdqlite.so 文件包含在 pydqlite 包中
+    },
     platforms=['Posix'],
     cmdclass={'test': PyTest, 'lint': PyLint},
     tests_require=['pytest', 'pytest-cov'],

@@ -1,6 +1,12 @@
 
 from __future__ import unicode_literals
 
+
+import ctypes
+import pkg_resources
+
+
+
 import codecs
 import logging
 
@@ -40,12 +46,13 @@ class Connection(object):
         NotSupportedError,
     )
 
-    def __init__(self, host='localhost', port=4001,
+    def __init__(self, host='localhost', port=9001, database="hci_db",
                  user=None, password=None, connect_timeout=None,
                  detect_types=0, max_redirects=UNLIMITED_REDIRECTS):
         self.messages = []
         self.host = host
         self.port = port
+        self.database = database
         self._headers = {}
         if not (user is None or password is None):
             self._headers['Authorization'] = 'Basic ' + \
@@ -60,11 +67,35 @@ class Connection(object):
         if host == ':memory:':
             self._ephemeral = _EphemeralDqlited().__enter__()
             self.host, self.port = self._ephemeral.http
+            
+        # 加载 Go 共享库
+        #libdqlite = ctypes.CDLL('./libdqlite.so')
+        # 获取 libdqlite.so 的路径
+        lib_path = pkg_resources.resource_filename('pydqlite', 'libdqlite.so')
+
+        # 加载 Go 共享库
+        self.libdqlite = ctypes.CDLL(lib_path)
+
+        # 定义函数原型
+        self.libdqlite.dqlite_connect.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        self.libdqlite.dqlite_connect.restype = ctypes.c_int
+
+        self.libdqlite.dqlite_query.argtypes = [ctypes.c_char_p]
+        self.libdqlite.dqlite_query.restype = ctypes.c_char_p
+
+        self.libdqlite.dqlite_disconnect.argtypes = []
+        self.libdqlite.dqlite_disconnect.restype = None    
         self._connection = self._init_connection()
 
     def _init_connection(self):
-        return HTTPConnection(self.host, port=self.port,
-                              timeout=None if self.connect_timeout is None else float(self.connect_timeout))
+        # return HTTPConnection(self.host, port=self.port,
+        #                       timeout=None if self.connect_timeout is None else float(self.connect_timeout))
+        
+     
+        node_address = f"{self.host}:{self.port}".encode()
+        database_name = f"{self.database}".encode()
+        connection = self.libdqlite.dqlite_connect(node_address, database_name)
+        return connection
 
     def _retry_request(self, method, uri, body=None, headers={}):
         tries = 10
@@ -117,7 +148,9 @@ class Connection(object):
         cursor objects trying to use the connection. Note that closing
         a connection without committing the changes first will cause an
         implicit rollback to be performed."""
-        self._connection.close()
+        if self.libdqlite:
+            self.libdqlite.dqlite_disconnect()
+        #self._connection.close()
         if self._ephemeral is not None:
             self._ephemeral.__exit__(None, None, None)
             self._ephemeral = None
@@ -135,6 +168,11 @@ class Connection(object):
         transaction support. """
         pass
 
+    def query(self, operation, parameters=None):
+
+        result =  self.libdqlite.dqlite_query(operation)
+        return result
+    
     def cursor(self, factory=None):
         """Return a new Cursor Object using the connection."""
         if factory:
