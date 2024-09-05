@@ -1,7 +1,13 @@
 *.pyc
+*/*.pyc
 *.pyo
 __pycache__
 *.egg-info
 /.cache
 /.coverage
 /htmlcov
+**/.venv/*
+.gitignore
+**/build/*
+dist/pydqlite-HEAD-py3.9.egg
+.gitignore
