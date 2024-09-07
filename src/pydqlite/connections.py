@@ -86,6 +86,7 @@ class Connection(object):
         self.libdqlite.dqlite_disconnect.argtypes = []
         self.libdqlite.dqlite_disconnect.restype = None    
         self._connection = self._init_connection()
+        self._current_cursor = None
 
     def _init_connection(self):
         # return HTTPConnection(self.host, port=self.port,
@@ -111,32 +112,32 @@ class Connection(object):
                 self._connection.close()
                 self._connection = self._init_connection()
 
-    def _fetch_response(self, method, uri, body=None, headers={}):
-        """
-        Fetch a response, handling redirection.
-        """
-        response = self._retry_request(method, uri, body=body, headers=headers)
-        redirects = 0
+    # def _fetch_response(self, method, uri, body=None, headers={}):
+    #     """
+    #     Fetch a response, handling redirection.
+    #     """
+    #     response = self._retry_request(method, uri, body=body, headers=headers)
+    #     redirects = 0
 
-        while response.status == 301 and \
-                response.getheader('Location') is not None and \
-                (self.max_redirects == UNLIMITED_REDIRECTS or redirects < self.max_redirects):
-            redirects += 1
-            uri = response.getheader('Location')
-            location = urlparse(uri)
+    #     while response.status == 301 and \
+    #             response.getheader('Location') is not None and \
+    #             (self.max_redirects == UNLIMITED_REDIRECTS or redirects < self.max_redirects):
+    #         redirects += 1
+    #         uri = response.getheader('Location')
+    #         location = urlparse(uri)
 
-            logging.getLogger(__name__).debug("status: %s reason: '%s' location: '%s'",
-                                              response.status, response.reason, uri)
+    #         logging.getLogger(__name__).debug("status: %s reason: '%s' location: '%s'",
+    #                                           response.status, response.reason, uri)
 
-            if self.host != location.hostname or self.port != location.port:
-                self._connection.close()
-                self.host = location.hostname
-                self.port = location.port
-                self._connection = self._init_connection()
+    #         if self.host != location.hostname or self.port != location.port:
+    #             self._connection.close()
+    #             self.host = location.hostname
+    #             self.port = location.port
+    #             self._connection = self._init_connection()
 
-            response = self._retry_request(method, uri, body=body, headers=headers)
+    #         response = self._retry_request(method, uri, body=body, headers=headers)
 
-        return response
+    #     return response
 
     def close(self):
         """Close the connection now (rather than whenever .__del__() is
@@ -163,22 +164,39 @@ class Connection(object):
         implement this method with void functionality."""
         pass
 
-    def rollback(self):
-        """This method is optional since not all databases provide
-        transaction support. """
-        pass
+    # def rollback(self):
+    #     """处理事务回滚"""
+    #     print("Rolling back in rollback ...... in pydqlite")
+        
+    #     try:
+    #         # 如果 pydqlite 支持事务，可以调用底层的 rollback API
+    #         # self.libdqlite.dqlite_rollback()
+
+    #         # 如果不支持，可以抛出异常
+    #         raise NotImplementedError("Dqlite does not support rollback.")
+    #     except Exception as e:
+    #         print(f"Rollback failed: {e}")
 
     def query(self, operation, parameters=None):
 
         result =  self.libdqlite.dqlite_query(operation)
         return result
     
-    def cursor(self, factory=None):
-        """Return a new Cursor Object using the connection."""
-        if factory:
-            return factory(self)
+    def cursor(self):
+        """返回新的游标对象，并保存游标"""
+        if self._current_cursor is not None:
+            print("old Cursor 1111111111111111111")
+            return self._current_cursor
         else:
-            return Cursor(self)
+            print("new Cursor222222222222222222222222")
+            self._current_cursor = Cursor(self)
+            return self._current_cursor
+    
 
-    def execute(self, *args, **kwargs):
-        return self.cursor().execute(*args, **kwargs)
+    def execute(self, statement, parameters=None):
+        """执行查询并返回游标"""
+        print("2222222jjjjjjjjjjjjjjjjjjjjjjjjjjjjjj")
+        if self._current_cursor is None:
+            self._current_cursor = self.cursor()
+        self._current_cursor.execute(statement, parameters)
+        return self._current_cursor

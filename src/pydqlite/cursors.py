@@ -60,35 +60,35 @@ class Cursor(object):
     def close(self):
         self._rows = None
 
-    def _request(self, method, uri, body=None, headers={}):
-        logger = logging.getLogger(__name__)
-        debug = logger.getEffectiveLevel() < logging.DEBUG
-        logger.debug(
-            'request method: %s uri: %s headers: %s body: %s',
-            method,
-            uri,
-            headers,
-            body)
-        response = self.connection._fetch_response(
-            method, uri, body=body, headers=headers)
-        logger.debug(
-            "status: %s reason: %s",
-            response.status,
-            response.reason)
-        response_text = response.read().decode('utf-8')
-        logger.debug("raw response: %s", response_text)
-        try:
-            response_json = json.loads(
-                response_text, object_pairs_hook=OrderedDict)
-        except Exception as e:
-            raise(e)
-        if debug:
-            logger.debug(
-                "formatted response: %s",
-                json.dumps(
-                    response_json,
-                    indent=4))
-        return response_json
+    # def _request(self, method, uri, body=None, headers={}):
+    #     logger = logging.getLogger(__name__)
+    #     debug = logger.getEffectiveLevel() < logging.DEBUG
+    #     logger.debug(
+    #         'request method: %s uri: %s headers: %s body: %s',
+    #         method,
+    #         uri,
+    #         headers,
+    #         body)
+    #     response = self.connection._fetch_response(
+    #         method, uri, body=body, headers=headers)
+    #     logger.debug(
+    #         "status: %s reason: %s",
+    #         response.status,
+    #         response.reason)
+    #     response_text = response.read().decode('utf-8')
+    #     logger.debug("raw response: %s", response_text)
+    #     try:
+    #         response_json = json.loads(
+    #             response_text, object_pairs_hook=OrderedDict)
+    #     except Exception as e:
+    #         raise(e)
+    #     if debug:
+    #         logger.debug(
+    #             "formatted response: %s",
+    #             json.dumps(
+    #                 response_json,
+    #                 indent=4))
+    #     return response_json
 
     #TODO: remove this -- pass args directly to DB and let it do param subst
     def _substitute_params(self, operation, parameters):
@@ -153,37 +153,162 @@ class Cursor(object):
     def _get_sql_command(self, sql_str):
         return sql_str.split(None, 1)[0].upper()
 
-    def _parse_query_result(self, result_str):
-        """
-        解析从 dqlite_query 返回的结果字符串，并将其转换为行列表。
-        """
-        rows = []
+    # def _parse_query_result(self, result_str):
+    #     """
+    #     解析从 dqlite_query 返回的结果字符串，并将其转换为行列表。
+    #     """
+    #     rows = []
         
-        # 简单处理结果字符串，假设结果是以换行分隔的行，每行以逗号分隔
-        for row in result_str.split('\n'):
-            if row.strip():  # 跳过空行
-                rows.append(tuple(row.split(',')))  # 将每行以逗号分隔成字段
+    #     # 简单处理结果字符串，假设结果是以换行分隔的行，每行以逗号分隔
+    #     for row in result_str.split('\n'):
+    #         if row.strip():  # 跳过空行
+    #             rows.append(tuple(row.split(',')))  # 将每行以逗号分隔成字段
         
-        return rows
+    #     return rows
+
+
+    # def _parse_query_result(self, query_result_str):
+    #     """
+    #     解析查询结果字符串，提取列名和数据行。
+
+    #     :param query_result_str: 从查询返回的原始结果字符串
+    #     :return: (columns, rows) - 列名和数据行的元组
+    #     """
+    #     lines = query_result_str.strip().split("\n")
+        
+    #     # 查找列名 "Columns:" 部分
+    #     columns = []
+    #     rows = []
+    #     in_columns_section = False
+        
+    #     for i, line in enumerate(lines):
+    #         # 检查是否有 "Columns:" 标记
+    #         if line.startswith("Columns:"):
+    #             in_columns_section = True
+    #             continue
+            
+    #         if in_columns_section:
+    #             # 空行表示列部分的结束
+    #             if line.strip() == "":
+    #                 break
+    #             # 添加列名
+    #             columns.append(line.strip())
+
+    #     # 获取数据部分，从列结束之后的下一行开始读取
+    #     data_start_index = i + 1 + len(columns)  # 跳过列名部分
+    #     for line in lines[data_start_index:]:
+    #         if line.strip():
+    #             # 忽略非数据行
+    #             if line.startswith("Results:"):
+    #                 continue
+    #             # 按空格分隔数据列
+    #             rows.append(line.split())
+
+    #     return columns, rows
+
+
+
+
+    def _parse_query_result(self, query_result_str):
+        # 解析 JSON 字符串
+        try:
+            result_json = json.loads(query_result_str)
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse query result: {e} 返回两个空列表")
+            return [], []
+
+        # 提取列名
+        columns = []
+        if "columns" in result_json:
+            for col_info in result_json["columns"]:
+                columns.append((
+                    col_info.get("name"),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    col_info.get("type")
+                ))
+
+        # 提取行数据
+        rows = result_json.get("rows", [])
+
+        return columns, rows
 
     def execute(self, operation, parameters=None):
+        print(f"222222 execute {self.rownumber}")
+        self.rownumber = 0
+        # Step 1: 替换参数并编码为字节
         operation = self._substitute_params(operation, parameters)
         query = operation.encode()  # 转换为字节类型
-        print(query)
-        query_result = self._connection.libdqlite.dqlite_query(query)
-        print(query_result)
-        if query_result:
-            # 解析查询结果并写入 self._rows
-            query_result_str = query_result.decode()
-            print(query_result_str)
-            self._rows = self._parse_query_result(query_result_str)
-            self.rowcount = len(self._rows)
-            print(f"Query result written to self._rows: {self._rows}")
-        else:
-            print("No result or query failed")
+        print(f"Executing query: {query}")
+
+        # Step 2: 执行查询，调用 dqlite_query 并检查结果
+        try:
+            query_result = self._connection.libdqlite.dqlite_query(query)
+            print(f"Raw query result: {query_result}")
+        except Exception as e:
+            print(f"Query execution failed: {e}")
             self._rows = []
             self.rowcount = 0
             return self
+
+        # Step 3: 解析查询结果
+        if query_result:
+            query_result_str = query_result.decode()
+            print(f"Decoded query result: {query_result_str}")
+
+            # Step 4: 解析行数据
+            try:
+                column_names, self._rows = self._parse_query_result(query_result_str)
+                self.rowcount = len(self._rows)
+                print(f"Parsed rows: {self._rows}")
+            except Exception as e:
+                print(f"Failed to parse query result: {e}")
+                self._rows = []
+                self.rowcount = 0
+                return self
+
+            # Step 5: 构造 `description`，从列名生成元数据
+            self.description = [
+                (col_name, None, None, None, None, None, None, None)
+                for col_name in column_names
+            ]
+            print(f"Description (column metadata): {self.description}")
+            
+            
+        else:
+            # 如果查询没有返回任何结果
+            print("No result or query failed")
+            self._rows = []
+            self.rowcount = 0
+            self.description = None
+            #self.rownumber = 0
+        
+        return self
+
+
+    # def execute(self, operation, parameters=None):
+    #     operation = self._substitute_params(operation, parameters)
+    #     query = operation.encode()  # 转换为字节类型
+    #     print(query)
+    #     query_result = self._connection.libdqlite.dqlite_query(query)
+    #     print(query_result)
+    #     if query_result:
+    #         # 解析查询结果并写入 self._rows
+    #         query_result_str = query_result.decode()
+    #         print(query_result_str)
+    #         self._rows = self._parse_query_result(query_result_str)
+    #         self.rowcount = len(self._rows)
+    #         print(f"Query result written to self._rows: {self._rows}")
+    #     else:
+    #         print("No result or query failed")
+    #         self._rows = []
+    #         self.rowcount = 0
+        
+    #     return self
 
     def executemany(self, operation, seq_of_parameters=None):
         if not isinstance(operation, basestring):
@@ -215,13 +340,24 @@ class Cursor(object):
         print(f"Total rows affected: {self.rowcount}")
         return self
 
+    # def fetchone(self):
+    #     '''Fetch the next row'''
+    #     if self._rows is None or self.rownumber >= len(self._rows):
+    #         return None
+    #     result = self._rows[self.rownumber]
+    #     self.rownumber += 1
+    #     return result
+    
     def fetchone(self):
-        ''' Fetch the next row '''
-        if self._rows is None or self.rownumber >= len(self._rows):
-            return None
-        result = self._rows[self.rownumber]
-        self.rownumber += 1
-        return result
+        print(f"1111111111 刚进来  Fetching row at position {self.rownumber}")
+        # 检查是否还有数据行未被读取
+        if self.rownumber < len(self._rows):
+            row = self._rows[self.rownumber]
+            self.rownumber += 1  # 增加行号
+            print(f"22222 增加了1 Fetching row at position {self.rownumber}")
+            return row
+        print(f"3333333  没有增加 Fetching row at position {self.rownumber}")
+        return None  # 没有更多行时返回 None
 
     def fetchmany(self, size=None):
         remaining = self.arraysize if size is None else size
@@ -229,6 +365,7 @@ class Cursor(object):
         return [self.fetchone() for i in range(remaining)]
 
     def fetchall(self):
+        print("Fetching all rows in pydqlite/cursors.py..........")
         rows = []
         while self.rownumber < self.rowcount:
             rows.append(self.fetchone())

@@ -11,17 +11,18 @@ try:
     # with connection.cursor() as cursor:
     #     cursor.execute('CREATE TABLE foo33 (id integer not null primary key, name text)')
 
-    
-    
     with connection.cursor() as cursor:
         #cursor.execute('CREATE TABLE foo (id integer not null primary key, name text)')
         
         
         #sql = "SELECT name FROM sqlite_master WHERE type='table';"
-        cursor.executemany('INSERT INTO foo(name) VALUES(?)', seq_of_parameters=(('a',), ('b',)))
-        sql = "select * from foo"
+        # cursor.executemany('INSERT INTO foo(name) VALUES(?)', seq_of_parameters=(('a',), ('b',)))
+        sql = "SELECT migrate_version.repository_id, migrate_version.repository_path, migrate_version.version FROM migrate_version WHERE migrate_version.repository_id = 'theweb'"
         cursor.execute(sql)
+        print(cursor)
         result = cursor.fetchall()
+        
+        
         print("---------1111")
         print(result)
         print("---------2222")      
