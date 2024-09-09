@@ -210,16 +210,20 @@ class Cursor(object):
 
     def process_datetime(self, value):
         try:
-            # 使用 Python 标准库解析日期时间字符串
+        # 先尝试解析带有毫秒的 ISO 8601 格式
+            try:
+                dt = datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
+            except ValueError:
+                # 如果失败，再尝试解析不带毫秒的 ISO 8601 格式
+                dt = datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
             
-            dt = datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
-            formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
-            return formatted_date
-        
         except ValueError as e:
             raise ValueError(f"Couldn't parse datetime string: {value}") from e
 
-
+        formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
+        return formatted_date
+        
+        
     def _parse_query_result(self, query_result_str):
         # 解析 JSON 字符串
         try:
