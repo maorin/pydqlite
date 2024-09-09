@@ -6,6 +6,7 @@ import json
 import logging
 import sys
 import re
+import datetime
 
 try:
     # pylint: disable=no-name-in-module
@@ -207,6 +208,16 @@ class Cursor(object):
     #     return columns, rows
 
 
+    def process_datetime(self, value):
+        try:
+            # 使用 Python 标准库解析日期时间字符串
+            
+            dt = datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
+            formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
+            return formatted_date
+        
+        except ValueError as e:
+            raise ValueError(f"Couldn't parse datetime string: {value}") from e
 
 
     def _parse_query_result(self, query_result_str):
@@ -232,8 +243,17 @@ class Cursor(object):
                     col_info.get("type")
                 ))
 
-        # 提取行数据
-        rows = result_json.get("rows", [])
+        # 提取行数据并根据列类型转换数据
+        rows = []
+        if "rows" in result_json:
+            for row in result_json["rows"]:
+                parsed_row = []
+                for value, col_info in zip(row, result_json["columns"]):
+                    # 如果列类型是 DATETIME，使用 process_datetime 进行转换
+                    if col_info.get("type") == "TIME":
+                        value = self.process_datetime(value)
+                    parsed_row.append(value)
+                rows.append(parsed_row)
 
         return columns, rows
 
