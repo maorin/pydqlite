@@ -17,8 +17,8 @@ try:
         
         #sql = "SELECT name FROM sqlite_master WHERE type='table';"
         # cursor.executemany('INSERT INTO foo(name) VALUES(?)', seq_of_parameters=(('a',), ('b',)))
-        sql = "SELECT migrate_version.repository_id, migrate_version.repository_path, migrate_version.version FROM migrate_version WHERE migrate_version.repository_id = 'theweb'"
-        cursor.execute(sql)
+        sql = "UPDATE migrate_version SET version=? WHERE migrate_version.version = ? AND migrate_version.repository_id = ?"
+        cursor.execute(sql, (1, 0, 'theweb'))
         print(cursor)
         result = cursor.fetchall()
         

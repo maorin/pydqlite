@@ -279,6 +279,27 @@ class Cursor(object):
             self.rowcount = 0
             return self
 
+
+        # Step 3: 检查是否是 `UPDATE` 或 `DELETE` 操作
+        if operation.strip().upper().startswith(("UPDATE", "DELETE", "INSERT")):
+            # 对于修改操作（UPDATE, DELETE, INSERT），只需要返回影响的行数
+            if query_result:
+                query_result_str = query_result.decode()
+                print(f"Decoded query result: {query_result_str}")
+                # 假设影响的行数可以通过解析结果中的某个值来获得
+                # 例如，解析一个返回的行数（如果有）
+                try:
+                    _, affected_rows = self._parse_query_result(query_result_str)
+                    self.rowcount = len(affected_rows)
+                except Exception as e:
+                    print(f"Failed to parse query result for row count: {e}")
+                    self.rowcount = 0
+            else:
+                self.rowcount = 0
+            self._rows = []
+            self.description = None
+            return self
+
         # Step 3: 解析查询结果
         if query_result:
             query_result_str = query_result.decode()
